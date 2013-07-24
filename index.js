@@ -1,14 +1,14 @@
 /* 
 Copyright 2013 Lcf.vs
 Released under the MIT license
-https://github.com/Lcfvs/Node/ESDB
+https://github.com/Lcfvs/ESDB
 */
 var fs, path,
     stat, mkdir, writeFile, readFile,
     sep, resolve,
     utilsDir, flushdir, rmdirRecursive,
-    dbDirectory, databases, loadTable, getView,
-    Database, Table, LoopBreaker;
+    dbDirectory, databases, loadTable, getView, LoopBreaker,
+    sendDbAccessor, sendTbAccessor;
 
 (function ( /* natives */ ) {
     fs = require('fs');
@@ -125,10 +125,23 @@ var fs, path,
 
         callback(error, view);
     };
+
+    LoopBreaker = function LoopBreaker() {
+        var state;
+
+        state = false;
+
+        this.getState = function getState() {
+            return state;
+        };
+        this.breakLoop = function breakLoop() {
+            state = true;
+        };
+    };
 }());
 
-(function ( /* classes */ ) {
-    Database = function Database(dbName, dbPath, callback) {
+(function ( /* core */ ) {
+    sendDbAccessor = function sendDbAccessor(dbName, dbPath, callback) {
         var accessor;
 
         if (databases[dbName] === undefined) {
@@ -145,7 +158,7 @@ var fs, path,
                         if (error) {
                             callback(new Error('Table "' + dbName + sep + tbName + '" already exists'));
                         } else {
-                            new Table(dbName, tbName, tbPath, callback);
+                            sendTbAccessor(dbName, tbName, tbPath, callback);
                         }
                     });
                 },
@@ -159,7 +172,7 @@ var fs, path,
                         if (error || !stats.isFile()) {
                             callback(new Error('Unknown table "' + tbName + '" in "' + dbName + '"'));
                         } else {
-                            new Table(dbName, tbName, tbPath, callback);
+                            sendTbAccessor(dbName, tbName, tbPath, callback);
                         }
                     });
                 },
@@ -176,7 +189,7 @@ var fs, path,
                         if (error) {
                             callback(error);
                         } else {
-                            new Table(dbName, tbName, tbPath, callback);
+                            sendTbAccessor(dbName, tbName, tbPath, callback);
                         }
                     });
                 },
@@ -192,7 +205,7 @@ var fs, path,
                         if (error) {
                             callback(error);
                         } else {
-                            new Table(dbName, tbName, tbPath, callback);
+                            sendTbAccessor(dbName, tbName, tbPath, callback);
                         }
                     });
                 },
@@ -224,7 +237,7 @@ var fs, path,
         callback(null, databases[dbName].accessor);
     };
 
-    Table = function Table(dbName, tbName, tbPath, callback) {
+    sendTbAccessor = function sendTbAccessor(dbName, tbName, tbPath, callback) {
         var db, table;
 
         db = databases[dbName];
@@ -530,19 +543,6 @@ var fs, path,
             callback(null, table.accessor);
         }
     };
-
-    LoopBreaker = function LoopBreaker() {
-        var state;
-
-        state = false;
-
-        this.getState = function getState() {
-            return state;
-        };
-        this.breakLoop = function breakLoop() {
-            state = true;
-        };
-    };
 }());
 
 (function (exports) {
@@ -555,7 +555,7 @@ var fs, path,
             if (error) {
                 callback(new Error('Database "' + dbName + '" already exists'));
             } else {
-                new Database(dbName, dbPath, callback);
+                sendDbAccessor(dbName, dbPath, callback);
             }
         });
     };
@@ -570,7 +570,7 @@ var fs, path,
                 if (error || !stats.isDirectory()) {
                     callback(new Error('Unknown database "' + dbName + '"'));
                 } else {
-                    new Database(dbName, dbPath, callback);
+                    sendDbAccessor(dbName, dbPath, callback);
                 }
             });
         } else {
@@ -586,7 +586,7 @@ var fs, path,
         flushDir(dbPath, function (error, errorPath) {
             if (!error) {
                 delete databases[dbName];
-                new Database(dbName, dbPath, callback);
+                sendDbAccessor(dbName, dbPath, callback);
             }
 
             if (dbPath === errorPath) {
