@@ -49,7 +49,9 @@ var fs, path,
     databases = {};
 
     loadTable = function loadTable(dbName, tbName, tbPath, accessor, callback) {
-        readFile(tbPath, 'utf-8', function (err, data) {
+        readFile(tbPath, {
+            encoding: 'utf8'
+        }, function (err, data) {
             var error, table;
 
             if (err) {
